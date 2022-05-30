@@ -7,10 +7,11 @@
   "author": "Rowe Wilson Frederisk Holme <frederisk@outlook.com>",
   "license": "MIT",
   "scripts": {
-    "check-type": "tsc",
-    "compile": "webpack --config webpack.config.js --mode development",
+    "compile": "npm run compile-prod",
+    "compile-dev": "webpack --config webpack.config.js --mode development",
     "compile-prod": "webpack --config webpack.config.js --mode production",
-    "babel": "babel --extensions .ts ./src --out-file ./dist/index.js",
+    "compile-babel": "babel --extensions .ts ./src --out-file ./dist/index.js",
+    "compile-tsc": "tsc -p ./",
     "lint": "eslint -c .eslintrc.yml --ext .ts ./src"
   },
   "devDependencies": {
