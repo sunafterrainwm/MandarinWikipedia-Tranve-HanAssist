@@ -12,15 +12,20 @@
  * Validated with ESLint.
  */
 
-type ValidKey = "zh" | "hans" | "hant" | "cn" | "tw" | "hk" | "sg" | "mo" | "my" | "en";
-type CandidatesRecord = Partial<Record<ValidKey, string>>;
-type MessageInfo = Record<string, string | CandidatesRecord>;
-type FallbackList = ValidKey[];
-type CanCalled = { call: (...args: unknown[]) => unknown }
+(function (): void {
+    'use strict';
+    type ValidKey = "zh" | "hans" | "hant" | "cn" | "tw" | "hk" | "sg" | "mo" | "my" | "en";
+    type CandidatesRecord = Partial<Record<ValidKey, string>>;
+    type MessageInfo = Record<string, string | CandidatesRecord>;
+    type FallbackList = ValidKey[];
+    type CanCalled = { call: (...args: unknown[]) => unknown }
+    interface HanAssistMessages {
+        messages: Record<string, string>;
+        warned: Record<string, boolean>;
+    }
 
-(function () {
-    // 'use strict';
-    const privateStorage: Record<string, any> = new WeakMap(),
+    // FIXME: privateStorage is `object` here.
+    const privateStorage: WeakMap<HanAssist, HanAssistMessages> = new WeakMap(),
         FALLBACKS: Record<string, FallbackList> = {
             'zh': ['zh', 'hans', 'hant', 'cn', 'tw', 'hk', 'sg', 'mo', 'my', 'en'],
             'zh-hans': ['hans', 'cn', 'sg', 'my', 'zh', 'hant', 'tw', 'hk', 'mo', 'en'],
@@ -75,7 +80,7 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
         return msg;
     }
 
-    function msgL10n(messages: MessageInfo, locale: string) {
+    function msgL10n(messages: MessageInfo, locale: string): Record<string, string> {
         const map: Record<string, string> = Object.create(null);
 
         for (const entry in messages) {
@@ -97,10 +102,15 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
 
     function areLegalCandidates(candidates: CandidatesRecord): boolean {
         return $.isPlainObject(candidates) &&
-            DEF_FB.some((locale) => typeof candidates[locale] === 'string');
+            DEF_FB.some((locale: ValidKey): boolean => typeof candidates[locale] === 'string');
     }
 
-    // From https://stackoverflow.com/questions/10473745/compare-strings-javascript-return-of-likely
+    /**
+     * From <https://stackoverflow.com/questions/10473745/compare-strings-javascript-return-of-likely>
+     * @param {string} s1 string1 to compare
+     * @param {string} s2 string2 to compare
+     * @returns similarity score
+     */
     function similarity(s1: string, s2: string): number {
         function distance(left: string, right: string): number {
             const l: string = left.toLowerCase();
@@ -152,7 +162,7 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
             assertCorrectArg(typeof locale === 'string', 'locale');
             const privateObj = {
                 messages: Object.freeze(msgL10n(messages, locale)),
-                warnedBucket: Object.create(null)
+                warned: Object.create(null)
             };
 
             privateStorage.set(this, privateObj);
@@ -163,13 +173,22 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
          *
          * @param {Function} executor function to be executed
          */
-        attach(executor: CanCalled) {
+        attach(executor: CanCalled): void {
             assertCorrectArg(typeof executor === 'function', 'executor');
+            // TODO: what type?
             const storage = privateStorage.get(this);
+            if (storage === undefined) {
+                throw new Error('storage is undefined');
+                // return;
+            }
 
             executor.call(this, (key: string) => {
                 function missingKey(): void {
                     type ElementStruct = { rating: number, elem: string };
+                    if (storage === undefined) {
+                        throw new Error('storage is undefined');
+                        // return;
+                    }
                     const { elem: similar } = Object.keys(storage.messages)
                         .map((elem: string): ElementStruct => ({ rating: similarity(key, elem), elem }))
                         .filter(({ rating }: ElementStruct): boolean => rating >= 0.6) // Ignore key if it is not similar enough
@@ -183,7 +202,7 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
                 assertCorrectArg(typeof key === 'string', 'key');
 
                 if (!(key in storage.messages)) {
-                    if (!storage.warnedBucket[key]) {
+                    if (!storage.warned[key]) {
                         setTimeout(missingKey, 0);
                     }
                     return key;
@@ -198,8 +217,8 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
          *
          * @return {Object} messages
          */
-        dump() {
-            return privateStorage.get(this).messages;
+        dump(): Record<string, string> | undefined {
+            return privateStorage.get(this)?.messages;
         }
 
         /**
@@ -272,7 +291,7 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
 
     // -- Legacy --
 
-    function legacyULS(hans: string, hant: string, cn: string, tw: string, hk: string, sg: string, zh: string, mo: string, my: string, en: string): string | undefined {
+    function legacyULS(hans?: string, hant?: string, cn?: string, tw?: string, hk?: string, sg?: string, zh?: string, mo?: string, my?: string, en?: string): string | undefined {
         try {
             return l10n(mw.config.get('wgUserLanguage'), { hans, hant, cn, tw, hk, sg, zh, mo, my, en });
         } catch (e) {
@@ -280,7 +299,7 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
         }
     }
 
-    function legacyUVS(hans: string, hant: string, cn: string, tw: string, hk: string, sg: string, zh: string, mo: string, my: string, en: string): string | undefined {
+    function legacyUVS(hans?: string, hant?: string, cn?: string, tw?: string, hk?: string, sg?: string, zh?: string, mo?: string, my?: string, en?: string): string | undefined {
         try {
             return l10n(mw.config.get('wgUserVariant'), { hans, hant, cn, tw, hk, sg, zh, mo, my, en });
         } catch (e) {
@@ -288,7 +307,7 @@ type CanCalled = { call: (...args: unknown[]) => unknown }
         }
     }
 
-    function legacyUXS(wg: string, hans: string, hant: string, cn: string, tw: string, hk: string, sg: string, zh: string, mo: string, my: string, en: string): string | undefined {
+    function legacyUXS(wg: string, hans?: string, hant?: string, cn?: string, tw?: string, hk?: string, sg?: string, zh?: string, mo?: string, my?: string, en?: string): string | undefined {
         try {
             return l10n(wg, { hans, hant, cn, tw, hk, sg, zh, mo, my, en });
         } catch (e) {
