@@ -21,7 +21,7 @@
     "rootDir": "./src/", /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
     // "composite": true,                           /* Enable project compilation */
     // "tsBuildInfoFile": "./",                     /* Specify file to store incremental compilation information */
-    "removeComments": false, /* Do not emit comments to output. */
+    // "removeComments": true, /* Do not emit comments to output. */
     // Don't emit; allow Babel to transform files.
     "noEmit": true, /* Do not emit outputs. */
     // "importHelpers": true,                       /* Import emit helpers from 'tslib'. */
@@ -45,6 +45,7 @@
     // "noFallthroughCasesInSwitch": true,          /* Report errors for fallthrough cases in switch statement. */
     // "noUncheckedIndexedAccess": true,            /* Include 'undefined' in index signature results */
     // "noImplicitOverride": true,                  /* Ensure overriding members in derived classes are marked with an 'override' modifier. */
+    // "noImplicitUseStrict": true, /* Parse in strict mode and emit "use strict" for each source file. */
     // "noPropertyAccessFromIndexSignature": true,  /* Require undeclared properties from index signatures to use element accesses. */
     /* Module Resolution Options */
     // Search under node_modules for non-relative imports.
@@ -75,5 +76,8 @@
     "./src",
     "./node_modules/types-mediawiki"
   ],
-  "exclude": []
+  "exclude": [
+    // "./node_modules",
+    "./dist"
+  ]
 }
