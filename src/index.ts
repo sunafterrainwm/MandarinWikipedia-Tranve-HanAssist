@@ -205,6 +205,47 @@ into this
 
     mw.messages.set(batchElect(MESSAGE_STORAGE, mw.config.get('wgUserLanguage')));
 
+    /**
+     * Check the type of {@link candidates} in runtime.
+     * @param {Candidates | string | [string] | [string, string] | unknown} candidates candidate objects
+     * @param {string} arg locale
+     * @returns {string} selected string
+     */
+    function electionProcess(candidates: Candidates | string | [string] | [string, string] | unknown, arg: string): string {
+        /**
+         * Return a string representing types of values in an array, separated with commas.
+         * @param {unknown[]} arr array of values
+         * @returns {string} string representation of types of values in an array
+         */
+        function arrayToStringOfTypes(arr: unknown[]): string {
+            return `[${arr.map((i: unknown): string => getTypeName(i)).join(',')}]`;
+        }
+
+        if (typeof candidates === 'string') {
+            return candidates;
+        }
+
+        if (Array.isArray(candidates)) {
+            if (candidates.length === 1 && typeof candidates[0] === 'string') {
+                return candidates[0];
+            }
+
+            if (candidates.length !== 2 || !candidates.every((i: unknown): boolean => typeof i === 'string')) {
+                raiseValidParamError('candidates', {
+                    expected: 'string | [string] | [string, string]',
+                    actual: arrayToStringOfTypes(candidates)
+                });
+            }
+            const reCandidates: Candidates = { hans: candidates[0], hant: candidates[1] };
+            return electionProcess(reCandidates, arg);
+        }
+
+        if (!areCandidates(candidates)) {
+            raiseValidParamError('candidates');
+        }
+        return elect(candidates, arg);
+    }
+
     // #region HanAssist
 
     class HanAssist {
@@ -376,7 +417,7 @@ HanAssist.localize(
          * @returns {string} selected string
          */
         public static localize(candidates: unknown, { locale }: { locale: string } = { locale: mw.config.get('wgUserLanguage') }): string {
-            return HanAssist.#electionProcess(candidates, locale);
+            return electionProcess(candidates, locale);
         }
 
         /**
@@ -404,50 +445,8 @@ HanAssist.vary( [ '一天一苹果，医生远离我。', '一天一蘋果，醫
          * @return {string} selected string
          */
         public static vary(candidates: unknown): string {
-            return HanAssist.#electionProcess(candidates, mw.config.get('wgUserVariant') || mw.user.options.get('variant'));
+            return electionProcess(candidates, mw.config.get('wgUserVariant') || mw.user.options.get('variant'));
         }
-
-        /**
-         * Check the type of {@link candidates} in runtime.
-         * @param {Candidates | string | [string] | [string, string] | unknown} candidates candidate objects
-         * @param {string} arg locale
-         * @returns {string} selected string
-         */
-        static #electionProcess(candidates: Candidates | string | [string] | [string, string] | unknown, arg: string): string {
-            /**
-             * Return a string representing types of values in an array, separated with commas.
-             * @param {unknown[]} arr array of values
-             * @returns {string} string representation of types of values in an array
-             */
-            function arrayToStringOfTypes(arr: unknown[]): string {
-                return `[${arr.map((i: unknown): string => getTypeName(i)).join(',')}]`;
-            }
-
-            if (typeof candidates === 'string') {
-                return candidates;
-            }
-
-            if (Array.isArray(candidates)) {
-                if (candidates.length === 1 && typeof candidates[0] === 'string') {
-                    return candidates[0];
-                }
-
-                if (candidates.length !== 2 || !candidates.every((i: unknown): boolean => typeof i === 'string')) {
-                    raiseValidParamError('candidates', {
-                        expected: 'string | [string] | [string, string]',
-                        actual: arrayToStringOfTypes(candidates)
-                    });
-                }
-                const reCandidates: Candidates = { hans: candidates[0], hant: candidates[1] };
-                return HanAssist.#electionProcess(reCandidates, arg);
-            }
-
-            if (!areCandidates(candidates)) {
-                raiseValidParamError('candidates');
-            }
-            return elect(candidates, arg);
-        }
-
         // #endregion static
     }
 
