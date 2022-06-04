@@ -29,7 +29,7 @@
             return false;
         }
         const proto = Object.getPrototypeOf(obj);
-        if (proto) {
+        if (!proto) {
             return true;
         }
         const constructor: unknown = Object.hasOwnProperty.call(proto, 'constructor') && proto.constructor;
